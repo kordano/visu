@@ -39,6 +39,7 @@
            (fill 255 230 0)
            (text (captions i) (+ x-start 5) (+ y-start (* i step) 20))))))))
 
+
 (defn overall-bar-graph [data]
   (let [summarized   (map #(reduce + (vals %)) (vals data))
         overall-sum  (reduce + summarized)
