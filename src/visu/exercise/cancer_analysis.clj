@@ -22,16 +22,33 @@
     (into {} (map vector row-names data))))
 
 
-(defn bar-graph [data]
+(defn create-legend []
+  (let [x-start 20
+        y-start 20
+        step 30
+        width 100
+        captions ["Children" "Mid Adults" "Older Adults"]
+        colors [[0 0 150] [0 150 0] [150 0 0]]]
+    (fill 255)
+    (dorun
+     (for [i (range 3)]
+       (let [[r g b] (colors i)]
+         (do
+           (fill r g b)
+           (rect x-start (+ y-start (* i step)) 100 step)
+           (fill 255 230 0)
+           (text (captions i) (+ x-start 5) (+ y-start (* i step) 20))))))))
+
+(defn overall-bar-graph [data]
   (let [summarized   (map #(reduce + (vals %)) (vals data))
         overall-sum  (reduce + summarized)
         values       (apply vector (map #(float (/ % overall-sum)) summarized))
         data-keys    (apply vector (keys data))
-        ch           (apply vector (map #(float (/ (% "Children") overall-sum)) (vals data)))
-        mid-adults   (apply vector (map #(float (/ (% "Mid Adults") overall-sum)) (vals data)))
-        older-adults (apply vector (map #(float (/ (% "Older Adults") overall-sum)) (vals data)))
-        scale        1000
-        y-start      760]
+        ch           (apply vector (map #(% "Children")  (vals data)))
+        mid-adults   (apply vector (map #(% "Mid Adults")  (vals data)))
+        older-adults (apply vector (map #(% "Older Adults")  (vals data)))
+        scale (/ 600 35000)
+        y-start 760]
       (dorun
        (for [i (range 7)]
          (do
@@ -57,8 +74,9 @@
     (size 800 800)
     (background 255 40)
     (smooth)
+    (create-legend)
     (no-stroke)
-    (bar-graph (clean-data data-path))))
+    (overall-bar-graph (clean-data data-path))))
 
 
 (defsketch cancer-analysis-screen
