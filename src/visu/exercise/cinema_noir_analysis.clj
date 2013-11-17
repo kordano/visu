@@ -151,6 +151,5 @@
   :title  "Analyse des Neo-Noir-Genres"
   :setup setup
   :draw draw
-  :update update
   :mouse-moved mouse-moved
   :size [1100 800])

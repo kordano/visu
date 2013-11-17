@@ -32,7 +32,3 @@
   :title "some-random-thingie"
   :setup setup
   :size [800 800])
-
-(let [counts (frequencies random-list-1)]
-  (for [i (keys counts)]
-    (dec (counts i))))

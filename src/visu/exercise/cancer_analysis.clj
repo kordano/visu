@@ -83,5 +83,4 @@
 (defsketch cancer-analysis-screen
   :title "Analyse von Krebsdaten"
   :setup setup
-  :draw draw
   :size [800 800])

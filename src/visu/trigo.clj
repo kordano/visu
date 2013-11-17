@@ -1,6 +1,7 @@
 (ns visu.trigo
   (:use quil.core))
 
+(def world (atom {:radius 50}))
 
 (defn setup []
   (size 600 200)
@@ -12,4 +13,4 @@
   (background 127)
   (no-stroke)
   (fill 255)
-  (ellipse (/ width 8) 75 (* radius 2) (* radius 2)))
+  (ellipse (/ (width) 8) 75 (* (:radius @world) 2) (* (:radius @world) 2)))
