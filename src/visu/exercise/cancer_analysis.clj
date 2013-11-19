@@ -27,8 +27,8 @@
         y-start 20
         step 30
         width 100
-        captions ["Children" "Mid Adults" "Older Adults"]
-        colors [[0 0 150] [0 150 0] [150 0 0]]]
+        captions ["Older Adults" "Mid Adults" "Children"]
+        colors [[150 0 0] [0 150 0] [0 0 150]]]
     (fill 255)
     (dorun
      (for [i (range 3)]
@@ -38,6 +38,22 @@
            (rect x-start (+ y-start (* i step)) 100 step)
            (fill 255 230 0)
            (text (captions i) (+ x-start 5) (+ y-start (* i step) 20))))))))
+
+
+(defn draw-scales []
+  (let [scale (/ 600 35000)
+        x-start 45
+        y-start 760]
+    (fill 0)
+    (line x-start y-start x-start 150)
+    (text-align :center)
+    (text "[in 1000]" x-start 150)
+    (dorun
+     (for [i (range 8)]
+       (do
+         (line (- x-start 5) (- y-start (* scale (* i 5000))) (+ x-start 5) (- y-start (* scale (* i 5000))))
+         (text-align :left)
+         (text (str (* i 5)) (- x-start 20) (+ 5 (- y-start (* scale (* i 5000))))))))))
 
 
 (defn overall-bar-graph [data]
@@ -76,6 +92,7 @@
     (background 255 40)
     (smooth)
     (create-legend)
+    (draw-scales)
     (no-stroke)
     (overall-bar-graph (clean-data data-path))))
 
