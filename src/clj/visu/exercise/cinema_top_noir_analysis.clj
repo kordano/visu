@@ -130,7 +130,7 @@
     (reset! (state :mouse-position) [x y])))
 
 
-(defsketch top-noir
+#_(defsketch top-noir
   :title "Analyse der Top Noir Film"
   :setup setup
   :draw draw

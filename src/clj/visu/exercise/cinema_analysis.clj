@@ -118,10 +118,10 @@
         draw-gross-data)
     (text-align :center)
     (text-size 17)
-    (text "Weekly Gross and Rank of Neo Noir Movies" (/ sketch-width 2) 50)))
+    (text "Weekly Gross and Rank of Kill Bill 2003" (/ sketch-width 2) 50)))
 
 
-(defsketch cinema-analysis-screen-1
+#_(defsketch cinema-analysis-screen-1
   :title "Analyse von Kinodaten"
   :setup setup
   :size [sketch-width sketch-height])

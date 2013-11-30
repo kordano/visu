@@ -88,7 +88,6 @@
 
 (defn setup []
   (let [data (clean-data data-path)]
-    (size 800 800)
     (background 255 40)
     (smooth)
     (create-legend)
@@ -97,7 +96,7 @@
     (overall-bar-graph (clean-data data-path))))
 
 
-(defsketch cancer-analysis-screen
+#_(defsketch cancer-analysis-screen
   :title "Analyse von Krebsdaten"
   :setup setup
   :size [800 800])

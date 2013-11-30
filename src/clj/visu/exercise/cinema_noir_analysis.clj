@@ -81,7 +81,7 @@
            (fill 255 0 0)
            (ellipse x y 5 5)
            (fill 0)
-          ; (text ((data i) "Title") x (- y 5))
+           (text ((data i) "Title") x (- y 5))
            )))))
   state)
 
@@ -137,7 +137,6 @@
         draw-scales
         draw-gross-data)))
 
-((deref diagram-state) :s)
 
 (defn draw []
   (let [[x y] @(state :mouse-position)
@@ -153,8 +152,7 @@
         (text "empty" (/ sketch-width 2) 30)
         (do
           (text (str ((first selected) "Title")) (/ sketch-width 2) 30)
-          (text (str ((first selected) "Overall_Gross") "$") (/ sketch-width 2) 45)
-          )))
+          (text (str ((first selected) "Overall_Gross") "$") (/ sketch-width 2) 45))))
     (if (mouse-state)
       (swap! diagram-state assoc :selected (find-data x y (deref diagram-state))))))
 
@@ -164,8 +162,8 @@
     (reset! (state :mouse-position) [x y])))
 
 
-(defsketch neo-noir-analysis-screen
-  :title  "Analyse des Neo-Noir-Genres"
+#_(defsketch neo-noir-analysis-screen
+  :title  "Einnahmen und Rankings im Neo-Noir-Genre"
   :setup setup
   :draw draw
   :mouse-moved mouse-moved
