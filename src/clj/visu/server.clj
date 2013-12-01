@@ -12,7 +12,7 @@
 
 (defn destructure-request [{type :type data :data }]
   (condp = type
-    "get-data" {:type "get-data" :data (get-data "cancer")}
+    "get" {:type "get" :data (get-data "cancer")}
     "greeting" {:type "greeting" :data "Hail to the LAMBDA!"}))
                                         ; websocket server
 (defn handler [request]
@@ -24,10 +24,8 @@
                             (send! channel (str (destructure-request (read-string data)))))))))
 
 
-(defn run-ws []
-  (defonce ^:private ws-server
-    (run-server handler {:port 9090}))
-  ws-server)
+(def stop-server (run-server handler {:port 9090}))
+#_(stop-server)
 
 
                                         ; ring server
@@ -47,9 +45,3 @@
   (defonce ^:private server
     (run-jetty #'site {:port 8080 :join? false}))
   server)
-
-
-(defn start []
-  (do
-    (run)
-    (run-ws)))
