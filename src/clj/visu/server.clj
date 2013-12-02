@@ -11,8 +11,8 @@
 
 
 (defn destructure-request [{type :type data :data }]
-  (condp = type
-    "get" {:type "get" :data (get-data "cancer")}
+  (case type
+    "get" {:type "get" :data (get-data data)}
     "greeting" {:type "greeting" :data "Hail to the LAMBDA!"}))
                                         ; websocket server
 (defn handler [request]
@@ -41,7 +41,4 @@
   (GET "/*" req (page)))
 
 
-(defn run []
-  (defonce ^:private server
-    (run-jetty #'site {:port 8080 :join? false}))
-  server)
+(def hmtl-server (run-jetty #'site {:port 8080 :join? false}))
