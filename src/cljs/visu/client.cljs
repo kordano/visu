@@ -53,12 +53,21 @@
          ["onmessage" (fn [m]
                         (let [data (.-data m)]
                           (receive-data data)))]]))
-  (set! (.-onclick (sel1 :#disconnect-button)) (fn []
-                                 (.close @websocket*)
-                                 (reset! websocket* nil)))
+  ;(set! (.-onclick (sel1 :#disconnect-button)) (fn [] (.close @websocket*) (reset! websocket* nil)))
   (log "websocket loaded."))
 
 ;; --- CANVAS STUFF ---
+
+(defn generate-random-color [[r g b]]
+  (let [r-new (rand-int 255)
+        g-new (rand-int 255)
+        b-new (rand-int 255)]
+    [(/ (+ r r-new) 2)
+     (/ (+ g g-new) 2)
+     (/ (+ b b-new) 2)]))
+
+(defn rgb-to-string [[r g b]]
+  (str "rgb(" r "," g "," b ")"))
 
 (defn draw-rect [x y w h c]
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
@@ -73,18 +82,20 @@
         width (@sketch-state :width)]
     (do
       (log "clearing canvas ...")
-      (set! (.-fillStyle ctx) "#FFFFFF")
+      (set! (.-fillStyle ctx) "#303030")
       (.fillRect ctx 0 0 width height))))
 
 (defn draw-cancer-graph []
   (let [data (vals (@sketch-state :data))
-        scale (/ 650.0 35000)
+        scale (/ 500.0 35000)
         the-children (apply vector (map #(% "Children") data))
         mid-adults (apply vector (map #(% "Mid Adults") data))
         older-adults (apply vector (map #(% "Older Adults") data))
         summarized (apply vector (map #(reduce + (vals %)) data))
-        sorted-summarized (sort-by val (into {} (map vector (range (count data)) summarized)))]
+        sorted-summarized (sort-by val (into {} (map vector (range (count data)) summarized)))
+        ]
     (do
+      (clear-canvas)
       (doall
        (map
         #(let [child-size (- (* scale (the-children %)))
@@ -96,19 +107,19 @@
               650
               45
               child-size
-              "#FF0000")
+              "#BB66AA")
              (draw-rect
               (+ 5 (* % 50))
               (+ 650 child-size)
               45
               mid-size
-              "#00FF00")
+              "#AABB66")
              (draw-rect
               (+ 5 (* % 50))
               (+ 650 child-size mid-size)
               45
               older-size
-              "#0000FF")))
+              "#66AABB")))
         (keys sorted-summarized))))))
 
 (defn draw-word [word x-position y-position words-list]
@@ -120,7 +131,7 @@
                    (* (- 1 a) (meta-data :text-min))
                    (* a (meta-data :text-max)))]
     (set! (.-font ctx) (str text-size "px Open Sans"))
-    (set! (.-fillStyle ctx) "#0000FF")
+    (set! (.-fillStyle ctx) "#66AABB")
     (let [x-start (if (< 1100 (+ x-position (.-width (.measureText ctx (key word)))))
                     0
                     x-position)
@@ -142,9 +153,9 @@
             :text-min 2
             :text-max 50})
     (clear-canvas)
-    ;(set! (.-fillStyle ctx) "#303030")
-    ;(.fillRect ctx 0 0 (@sketch-state :width) (@sketch-state :height))
-    (draw-word (first data) 0 (@sketch-state :text-max) (rest data))))
+    (set! (.-fillStyle ctx) "#03030")
+    (.fillRect ctx 0 0 (@sketch-state :width) (@sketch-state :height))
+    (draw-word (first data) 0 50 (rest data))))
 
 
 
@@ -152,37 +163,43 @@
 
 (defn enable-buttons []
   (do
-    (set!
-     (.-onclick (sel1 :#connect-button))
-     (fn [] (establish-websocket)))
+    ;(set! (.-onclick (sel1 :#connect-button)) (fn [] (establish-websocket)))
     (set!
      (.-onclick (sel1 :#cancer-graph-button))
      (fn [] (go
              (send-data {:type "get" :data "cancer"})
              (<! (timeout 500))
-             (draw-cancer-graph))))
+             (draw-cancer-graph)
+             (dom/set-text! (sel1 :#header-title) "Cancer Graph"))))
     (set!
      (.-onclick (sel1 :#word-cloud-button))
      (fn [] (go
              (send-data {:type "get" :data "wordcloud"})
              (<! (timeout 500))
-             (draw-word-cloud))))
+             (draw-word-cloud)
+             (dom/set-text! (sel1 :#header-title) "Wordcloud"))))
     (set!
      (.-onclick (sel1 :#clear-canvas-button))
      (fn [] (clear-canvas)))))
 
 
+(defn create-ui []
+  (let [body (sel1 :boy)]))
+
 (defn init []
   (let [body (sel1 :body)
         state (deref sketch-state)]
     (do
-      (dom/append! body [:div#canvas-div [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
-      (dom/append! body [:button#connect-button {:type "button"} "Connect"])
-      (dom/append! body [:button#disconnect-button {:type "button"} "Disconnect"])
+      (dom/append! body [:div#ui-header [:a.header-entry#header-menu "Overview"] [:a.header-entry#header-title "Title"]])
+      (dom/append! body [:div#canvas-div
+                         [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
+      ;(dom/append! body [:button#connect-button {:type "button"} "Connect"])
+      ;(dom/append! body [:button#disconnect-button {:type "button"} "Disconnect"])
       (dom/append! body [:button#clear-canvas-button {:type "button"} "Clear canvas"])
       (dom/append! body [:button#cancer-graph-button {:type "button"} "Draw cancer graph"])
       (dom/append! body [:button#word-cloud-button {:type "button"} "Draw word cloud"])
-      (enable-buttons))))
+      (enable-buttons)
+      (establish-websocket))))
 
 
 
