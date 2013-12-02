@@ -5,8 +5,7 @@
 
 
 (defn get-data [name]
-  (condp = name
+  (case name
     "cancer" (cancer/clean-data "data/cancer_data.csv")
-    "manifesto" (parser/get-text-frequencies "data/kommunistisches_manifest.txt")
-    "english_stopwords" (split (slurp "data/english_stopwords.txt") #",")
+    "wordcloud" (parser/get-text-frequencies "data/kommunistisches_manifest.txt")
     "data not found"))
