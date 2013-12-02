@@ -3,6 +3,8 @@ body {
     margin: 0;
     padding: 0;
     border: 0;
+    font-family : "Open Sans";
+    font-size: 12pt;
 }
 
 #ui-header {
@@ -10,7 +12,7 @@ body {
     margin : 0;
     padding : 0;
     border: 0;
-    color : orange;
+    color : #10CCAA;
 }
 
 
