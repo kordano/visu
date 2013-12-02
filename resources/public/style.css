@@ -1,0 +1,19 @@
+body {
+    background-color: #303030;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+#ui-header {
+    background-color: #3C3C3C;
+    margin : 0;
+    padding : 0;
+    border: 0;
+    color : orange;
+}
+
+
+.header-entry {
+    margin-left : 20px;
+}
