@@ -1,9 +1,22 @@
 # visu
 
-Some experiments with quil.
+Visualizations on the HTML canvas and some quil experiments.
 
 ## Usage
 
+Build the clojurescript files
+
+```
+lein cljsbuild once
+```
+
+Start the servers via
+
+```
+lein run
+```
+
+Visit [localhost:8080](http://localhost:8080 "Visu")
 
 
 ## License
