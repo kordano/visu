@@ -42,3 +42,7 @@
 
 
 (def hmtl-server (run-jetty #'site {:port 8080 :join? false}))
+
+(defn -main
+  [& args]
+  (println "Servers up and running..."))

@@ -23,6 +23,7 @@
 
   :repl-options {:init-ns visu.server}
 
+  :main visu.server
   :cljsbuild
   {:builds
    [{:source-paths ["src/cljs"]
