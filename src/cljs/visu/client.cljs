@@ -53,7 +53,7 @@
          ["onmessage" (fn [m]
                         (let [data (.-data m)]
                           (receive-data data)))]]))
-  ;(set! (.-onclick (sel1 :#disconnect-button)) (fn [] (.close @websocket*) (reset! websocket* nil)))
+  (set! (.-onclick (sel1 :#disconnect-button)) (fn [] (.close @websocket*) (reset! websocket* nil)))
   (log "websocket loaded."))
 
 ;; --- CANVAS STUFF ---
@@ -88,12 +88,12 @@
 (defn draw-cancer-graph []
   (let [data (vals (@sketch-state :data))
         scale (/ 500.0 35000)
+        step (/ (- (@sketch-state :width) 200) (count data))
         the-children (apply vector (map #(% "Children") data))
         mid-adults (apply vector (map #(% "Mid Adults") data))
         older-adults (apply vector (map #(% "Older Adults") data))
         summarized (apply vector (map #(reduce + (vals %)) data))
-        sorted-summarized (sort-by val (into {} (map vector (range (count data)) summarized)))
-        ]
+        sorted-summarized (sort-by val (into {} (map vector (range (count data)) summarized)))]
     (do
       (clear-canvas)
       (doall
@@ -103,21 +103,21 @@
                older-size (- (* scale (older-adults %)))]
            (do
              (draw-rect
-              (+ 5 (* % 50))
+              (+ 5 (* % step))
               650
-              45
+              (- step 5)
               child-size
               "#BB66AA")
              (draw-rect
-              (+ 5 (* % 50))
+              (+ 5 (* % step))
               (+ 650 child-size)
-              45
+              (- step 5)
               mid-size
               "#AABB66")
              (draw-rect
-              (+ 5 (* % 50))
+              (+ 5 (* % step))
               (+ 650 child-size mid-size)
-              45
+              (- step 5)
               older-size
               "#66AABB")))
         (keys sorted-summarized))))))
@@ -163,7 +163,7 @@
 
 (defn enable-buttons []
   (do
-    ;(set! (.-onclick (sel1 :#connect-button)) (fn [] (establish-websocket)))
+    (set! (.-onclick (sel1 :#connect-button)) (fn [] (establish-websocket)))
     (set!
      (.-onclick (sel1 :#cancer-graph-button))
      (fn [] (go
@@ -184,23 +184,32 @@
 
 
 (defn create-ui []
-  (let [body (sel1 :boy)]))
+  (let [body (sel1 :body)]
+    (dom/append!
+     body
+     [:nav
+      [:ul
+       [:li.cat1 [:a  "Home"]
+        [:ul
+         [:li [:a#connect-button  "Connect"]]
+         [:li [:a#disconnect-button "Disconnect"]]]]
+       [:li.cat2
+        [:a  "Drawings"]
+        [:ul
+         [:li [:a#cancer-graph-button  "Cancer graph"]]
+         [:li [:a#word-cloud-button "Word Cloud"]]
+         [:li [:a#clear-canvas-button "Clear"]]]]
+       [:li.cat3 [:a#header-title "Title"]]]])))
+
 
 (defn init []
   (let [body (sel1 :body)
         state (deref sketch-state)]
     (do
-      (dom/append! body [:div#ui-header [:a.header-entry#header-menu "Overview"] [:a.header-entry#header-title "Title"]])
-      (dom/append! body [:div#canvas-div
-                         [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
-      ;(dom/append! body [:button#connect-button {:type "button"} "Connect"])
-      ;(dom/append! body [:button#disconnect-button {:type "button"} "Disconnect"])
-      (dom/append! body [:button#clear-canvas-button {:type "button"} "Clear canvas"])
-      (dom/append! body [:button#cancer-graph-button {:type "button"} "Draw cancer graph"])
-      (dom/append! body [:button#word-cloud-button {:type "button"} "Draw word cloud"])
+      (create-ui)
+      (dom/append! body [:div#canvas-div [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
       (enable-buttons)
       (establish-websocket))))
-
 
 
 (set! (.-onload js/window) init)
@@ -210,3 +219,4 @@
 #_(clear-canvas)
 #_(send-data {:type "get" :data "wordcloud"})
 #_(draw-word-cloud)
+#_(create-ui)
