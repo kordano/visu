@@ -19,3 +19,54 @@ body {
 .header-entry {
     margin-left : 20px;
 }
+
+nav {
+    width: 100%;
+}
+
+nav ul {
+    padding: 0px;
+    margin: 0px;
+}
+
+nav ul:after {
+    clear: both;
+    content: " ";
+    display: block;
+    font-size: 0;
+    height: 0;
+    visibility: hidden;
+}
+
+nav ul,nav ul li{
+    background-color: #3C3C3C;
+}
+nav ul li {
+    list-style: none;
+    float:left;
+}
+nav ul li a {
+    text-decoration: none;
+    display: block;
+    color: #10CCAA;
+    padding: 14px 34px 14px 34px;
+}
+nav ul li:hover > ul {
+    visibility: visible;
+}
+nav ul li ul{
+    display: inline;
+    visibility: hidden;
+    position: absolute;
+    padding:0px;
+}
+nav ul li ul li{
+    float: none;
+}
+nav ul li ul li a:hover{
+    color: #FFFFFF;
+}
+
+#header-title {
+    color: orange;
+}
