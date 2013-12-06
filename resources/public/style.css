@@ -4,22 +4,11 @@ body {
     padding: 0;
     border: 0;
     font-family : "Open Sans";
-    font-size: 12pt;
-}
-
-#ui-header {
-    background-color: #3C3C3C;
-    margin : 0;
-    padding : 0;
-    border: 0;
-    color : #10CCAA;
+    font-size: 14px;
 }
 
 
-.header-entry {
-    margin-left : 20px;
-}
-
+/* Navigation bar */
 nav {
     width: 100%;
 }
@@ -41,32 +30,36 @@ nav ul:after {
 nav ul,nav ul li{
     background-color: #3C3C3C;
 }
+
 nav ul li {
     list-style: none;
     float:left;
 }
+
 nav ul li a {
     text-decoration: none;
     display: block;
     color: #10CCAA;
-    padding: 14px 34px 14px 34px;
+    padding: 7px 17px 7px 17px;
 }
-nav ul li:hover > ul {
+
+nav ul li:hover, nav ul li:hover > ul {
+    cursor: pointer;
     visibility: visible;
 }
+
 nav ul li ul{
     display: inline;
     visibility: hidden;
     position: absolute;
     padding:0px;
 }
+
 nav ul li ul li{
     float: none;
 }
-nav ul li ul li a:hover{
-    color: #FFFFFF;
-}
 
-#header-title {
-    color: orange;
+nav ul li ul li a:hover{
+    cursor: pointer;
+    color: #FFFFFF;
 }
