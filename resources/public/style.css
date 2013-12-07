@@ -39,8 +39,13 @@ nav ul li {
 nav ul li a {
     text-decoration: none;
     display: block;
-    color: #10CCAA;
+    color: #80FF00; /* #10CCAA*/
     padding: 7px 17px 7px 17px;
+
+    transition: background 0.3s ease-out; /* explorer 10 */
+    -webkit-transition: background 0.3s ease-out; /* chrome & safari */
+    -moz-transition: background 0.3 ease-out; /* firefox */
+    -o-transition: background 0.3 ease-out; /* opera */
 }
 
 nav ul li:hover, nav ul li:hover > ul {
@@ -62,4 +67,9 @@ nav ul li ul li{
 nav ul li ul li a:hover{
     cursor: pointer;
     color: #FFFFFF;
+}
+nav ul li ul li a:active{
+    cursor: pointer;
+    color: #3C3C3c;
+    background: #80FF00;
 }

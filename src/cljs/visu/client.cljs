@@ -1,5 +1,6 @@
 (ns visu.client
   (:require goog.net.WebSocket
+            [goog.color :as gcolor]
             [dommy.core :as dom]
             [hiccups.runtime :as hiccupsrt]
             [cljs.reader :refer [read-string]]
@@ -66,8 +67,10 @@
      (/ (+ g g-new) 2)
      (/ (+ b b-new) 2)]))
 
+
 (defn rgb-to-string [[r g b]]
-  (str "rgb(" r "," g "," b ")"))
+  (gcolor/rgbToHex r g b))
+
 
 (defn draw-rect [x y w h c]
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
