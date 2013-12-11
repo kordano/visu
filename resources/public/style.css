@@ -1,16 +1,22 @@
 body {
-    background-color: #303030;
+    background-color: #202035;
     margin: 0;
     padding: 0;
     border: 0;
     font-family : "Open Sans";
     font-size: 14px;
+    color: #7070AA;
+    width: 100%;
 }
 
+#the-canvas {
+    margin: 5px 15px;
+}
 
 /* Navigation bar */
 nav {
-    width: 100%;
+    font-size: 15px;
+    margin: 5px 10px;
 }
 
 nav ul {
@@ -28,7 +34,7 @@ nav ul:after {
 }
 
 nav ul,nav ul li{
-    background-color: #3C3C3C;
+    background-color: #303050;
 }
 
 nav ul li {
@@ -39,7 +45,7 @@ nav ul li {
 nav ul li a {
     text-decoration: none;
     display: block;
-    color: #80FF00; /* #10CCAA*/
+    color: #7070aa;
     padding: 7px 17px 7px 17px;
 
     transition: background 0.3s ease-out; /* explorer 10 */
@@ -51,6 +57,7 @@ nav ul li a {
 nav ul li:hover, nav ul li:hover > ul {
     cursor: pointer;
     visibility: visible;
+    color: #ffffff;
 }
 
 nav ul li ul{
@@ -70,6 +77,6 @@ nav ul li ul li a:hover{
 }
 nav ul li ul li a:active{
     cursor: pointer;
-    color: #3C3C3c;
-    background: #80FF00;
+    color: #303050;
+    background: #7070aa;
 }
