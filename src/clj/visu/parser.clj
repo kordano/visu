@@ -6,10 +6,12 @@
 (def special-characters [";" "," "\\." "!" "\\?" ":" "\\*" "\""  "'" "_" "-" "\\)" "\\(" "\r" "\\]" "\\["])
 (def stopwords (into #{} (split (slurp "data/english_stopwords.txt") #",")))
 
+
 (defn- remove-special-chars [word special-chars-list]
   (if-not (seq special-chars-list)
     (lower-case word)
     (recur (replace word (re-pattern (first special-chars-list)) "") (rest special-chars-list))))
+
 
 (defn get-text-frequencies [path]
   (->> (split (slurp path) #"\n")
@@ -19,3 +21,10 @@
        (remove blank?)
        (remove stopwords)
        frequencies))
+
+
+(defn get-adjacency-list [path]
+  (->> (split (slurp path) #"\n")
+       (map #(split % #" "))
+       (map (fn [entry] (into #{} (map #(Integer/parseInt %) entry))))
+       (apply vector)))
