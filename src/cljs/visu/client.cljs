@@ -79,51 +79,66 @@
       (.fillRect ctx x y w h))))
 
 
+(defn draw-text [x y text size alignment color]
+  (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
+    (do
+      (set! (.-fillStyle ctx) color)
+      (set! (.-font ctx) (str size "px Open Sans"))
+      (set! (.-textAlign ctx) alignment)
+      (log (.-textAlign ctx))
+      (.fillText ctx text x y))))
+
 (defn clear-canvas []
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")
         height (@sketch-state :height)
         width (@sketch-state :width)]
     (do
       (log "clearing canvas ...")
-      (set! (.-fillStyle ctx) "#303030")
+      (set! (.-fillStyle ctx) "#202035")
       (.fillRect ctx 0 0 width height))))
 
 (defn draw-cancer-graph []
-  (let [data (vals (@sketch-state :data))
-        scale (/ 500.0 35000)
-        step (/ (- (@sketch-state :width) 200) (count data))
+  (let [raw-data (@sketch-state :data)
+        data (vals raw-data)
+        cancer-type (apply vector (keys raw-data))
+        scale (/ 400.0 35000)
+        y-start 450
+        bar-width 600
+        step (/ 600 (count data))
         the-children (apply vector (map #(% "Children") data))
         mid-adults (apply vector (map #(% "Mid Adults") data))
         older-adults (apply vector (map #(% "Older Adults") data))
         summarized (apply vector (map #(reduce + (vals %)) data))
-        sorted-summarized (sort-by val (into {} (map vector (range (count data)) summarized)))]
+        sorted-summarized (->> (map vector (range (count data)) summarized)
+                              (into {})
+                              (sort-by val)
+                              keys
+                              reverse)
+        sorted-hashmap (into {} (map vector (range (count data)) sorted-summarized))]
     (do
       (clear-canvas)
+      (draw-text (/ bar-width 2) 20 "Female Cancer Distribution" 16 "center" "#50afde")
       (doall
        (map
-        #(let [child-size (- (* scale (the-children %)))
-               mid-size (- (* scale (mid-adults %)))
-               older-size (- (* scale (older-adults %)))]
+        #(let [child-size (- (* scale (the-children (val %))))
+               mid-size (- (* scale (mid-adults (val %))))
+               older-size (- (* scale (older-adults (val %))))
+               x (+ 5 (* (key %) step))]
            (do
              (draw-rect
-              (+ 5 (* % step))
-              650
-              (- step 5)
-              child-size
+              x y-start
+              (- step 5) child-size
               "#BB66AA")
              (draw-rect
-              (+ 5 (* % step))
-              (+ 650 child-size)
-              (- step 5)
-              mid-size
+              x (+ y-start child-size)
+              (- step 5) mid-size
               "#AABB66")
              (draw-rect
-              (+ 5 (* % step))
-              (+ 650 child-size mid-size)
-              (- step 5)
-              older-size
-              "#66AABB")))
-        (keys sorted-summarized))))))
+              x (+ y-start child-size mid-size)
+              (- step 5) older-size
+              "#66AABB")
+             (draw-text (+ x (/ step 2)) (+ y-start 20) (cancer-type (val %)) 14 "center" "#7070aa")))
+        sorted-hashmap)))))
 
 (defn draw-word [word x-position y-position words-list]
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")
@@ -156,10 +171,15 @@
             :text-min 2
             :text-max 50})
     (clear-canvas)
-    (set! (.-fillStyle ctx) "#03030")
+    (set! (.-fillStyle ctx) "#202035")
     (.fillRect ctx 0 0 (@sketch-state :width) (@sketch-state :height))
     (draw-word (first data) 0 50 (rest data))))
 
+
+(defn draw-force-based-graph []
+  (let [data ((@sketch-state :data))
+        ctx (.getContext (sel1 :#the-canvas) "2d")]
+    (clear-canvas)))
 
 
 ;; --- HTML STUFF ---
@@ -168,7 +188,7 @@
   (do
     (set! (.-onclick (sel1 :#connect-button)) (fn [] (establish-websocket)))
     (set!
-     (.-onclick (sel1 :#cancer-graph-button))
+     (.-onclick (sel1 :#cancer-bar-graph-button))
      (fn [] (go
              (send-data {:type "get" :data "cancer"})
              (<! (timeout 500))
@@ -186,7 +206,7 @@
      (fn [] (clear-canvas)))))
 
 
-(defn create-ui []
+(defn create-nav []
   (let [body (sel1 :body)]
     (dom/append!
      body
@@ -199,8 +219,9 @@
        [:li.cat2
         [:a  "Drawings"]
         [:ul
-         [:li [:a#cancer-graph-button  "Cancer graph"]]
+         [:li [:a#cancer-bar-graph-button  "Cancer bar graph"]]
          [:li [:a#word-cloud-button "Word Cloud"]]
+         [:li [:a#force-based-graph "Force-based graph"]]
          [:li [:a#clear-canvas-button "Clear"]]]]
        [:li.cat3 [:a#header-title "Title"]]]])))
 
@@ -209,7 +230,7 @@
   (let [body (sel1 :body)
         state (deref sketch-state)]
     (do
-      (create-ui)
+      (create-nav)
       (dom/append! body [:div#canvas-div [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
       (enable-buttons)
       (establish-websocket))))
@@ -222,4 +243,4 @@
 #_(clear-canvas)
 #_(send-data {:type "get" :data "wordcloud"})
 #_(draw-word-cloud)
-#_(create-ui)
+#_(create-nav)
