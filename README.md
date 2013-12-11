@@ -18,6 +18,7 @@ lein run
 
 Visit [localhost:8080](http://localhost:8080 "Visu")
 
+The client connects automatically with the websocket server, use the navigation menu to check the different visualizations. Unfortunately there are only two at the moment.
 
 ## License
 
