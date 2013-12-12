@@ -24,7 +24,15 @@
 
 
 (defn get-adjacency-list [path]
-  (->> (split (slurp path) #"\n")
-       (map #(split % #" "))
-       (map (fn [entry] (into #{} (map #(Integer/parseInt %) entry))))
-       (apply vector)))
+  "Parse adjacency list and convert to readable form"
+  (let [raw-data (split (slurp path) #"\n")
+        edges (map #(split % #" ") raw-data)
+        keyword-sequence (range 1 (inc (count raw-data)))]
+    (->> (into {} (map vector keyword-sequence edges))
+         (map (fn [x] (map #(into #{} [(key x) %]) (val x))))
+         flatten
+         (apply vector))))
+
+
+;; live coding vars
+#_(get-adjacency-list "data/graph.adjl")
