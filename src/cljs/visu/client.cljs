@@ -57,6 +57,8 @@
   (set! (.-onclick (sel1 :#disconnect-button)) (fn [] (.close @websocket*) (reset! websocket* nil)))
   (log "websocket loaded."))
 
+
+
 ;; --- CANVAS STUFF ---
 
 (defn generate-random-color [[r g b]]
@@ -79,14 +81,23 @@
       (.fillRect ctx x y w h))))
 
 
+(defn draw-arc [x y r start-angle end-angle color]
+  (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
+    (do
+      (.beginPath ctx)
+      (.arc ctx x y r start-angle end-angle)
+      (set! (.-strokeStyle ctx) color)
+      (.stroke ctx))))
+
+
 (defn draw-text [x y text size alignment color]
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
     (do
       (set! (.-fillStyle ctx) color)
       (set! (.-font ctx) (str size "px Open Sans"))
       (set! (.-textAlign ctx) alignment)
-      (log (.-textAlign ctx))
       (.fillText ctx text x y))))
+
 
 (defn clear-canvas []
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")
@@ -96,6 +107,7 @@
       (log "clearing canvas ...")
       (set! (.-fillStyle ctx) "#202035")
       (.fillRect ctx 0 0 width height))))
+
 
 (defn draw-cancer-graph []
   (let [raw-data (@sketch-state :data)
@@ -140,6 +152,7 @@
              (draw-text (+ x (/ step 2)) (+ y-start 20) (cancer-type (val %)) 14 "center" "#7070aa")))
         sorted-hashmap)))))
 
+
 (defn draw-word [word x-position y-position words-list]
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")
         meta-data (@sketch-state :meta-data)
@@ -149,6 +162,7 @@
                    (* (- 1 a) (meta-data :text-min))
                    (* a (meta-data :text-max)))]
     (set! (.-font ctx) (str text-size "px Open Sans"))
+    (set! (.-textAlign ctx) "left")
     (set! (.-fillStyle ctx) "#66AABB")
     (let [x-start (if (< 1100 (+ x-position (.-width (.measureText ctx (key word)))))
                     0
@@ -159,7 +173,9 @@
       (.fillText ctx (key word) x-start y-start)
       (if-not (seq words-list)
         (log "done")
-        (recur (first words-list) (+ x-start (.-width (.measureText ctx (key word)))) y-start (rest words-list))))))
+        (go
+          (<! (timeout 150))
+          (draw-word (first words-list) (+ x-start (.-width (.measureText ctx (key word)))) y-start (rest words-list)))))))
 
 
 (defn draw-word-cloud []
@@ -176,12 +192,30 @@
     (draw-word (first data) 0 50 (rest data))))
 
 
+(defn draw-spiral [theta r]
+  (let [x (+ (/ (@sketch-state :width) 2) (* r (Math/cos theta)))
+        y (+ (/ (@sketch-state :height) 2)(* r (Math/sin theta)))]
+    (do
+      (draw-arc x y 2 0 (* 2 Math/PI) (rgb-to-string (generate-random-color [255 255 255])))
+      (if (>= theta (* 128 Math/PI))
+        (log "done")
+        (go
+          (<! (timeout 30))
+          (draw-spiral (+ theta (* 3 (/ Math/PI 200))) (+ r 0.1)))))))
+
+#_(draw-spiral 0 0)
+
 (defn draw-force-based-graph []
-  (let [data ((@sketch-state :data))
+  (let [data (-> @sketch-state :data)
+        sketch-height (@sketch-state :height)
+        sketch-width (@sketch-state :width)
         ctx (.getContext (sel1 :#the-canvas) "2d")]
-    (clear-canvas)))
+    (clear-canvas)
+    (doall
+     (map #(draw-arc (-> % val :x) (-> % val :y) 3  0 (* 2 Math/PI) "#ffffff") vertices))))
 
 
+#_(draw-force-based-graph)
 ;; --- HTML STUFF ---
 
 (defn enable-buttons []
@@ -202,6 +236,13 @@
              (draw-word-cloud)
              (dom/set-text! (sel1 :#header-title) "Wordcloud"))))
     (set!
+     (.-onclick (sel1 :#force-based-graph-button))
+     (fn [] (go
+             (send-data {:type "get" :data "graph"})
+             (<! (timeout 500))
+             (draw-spiral 0 0)
+             (dom/set-text! (sel1 :#header-title) "Spiral"))))
+    (set!
      (.-onclick (sel1 :#clear-canvas-button))
      (fn [] (clear-canvas)))))
 
@@ -221,7 +262,7 @@
         [:ul
          [:li [:a#cancer-bar-graph-button  "Cancer bar graph"]]
          [:li [:a#word-cloud-button "Word Cloud"]]
-         [:li [:a#force-based-graph "Force-based graph"]]
+         [:li [:a#force-based-graph-button "Force-based graph"]]
          [:li [:a#clear-canvas-button "Clear"]]]]
        [:li.cat3 [:a#header-title "Title"]]]])))
 
@@ -237,10 +278,3 @@
 
 
 (set! (.-onload js/window) init)
-
-#_(init)
-#_(establish-websocket)
-#_(clear-canvas)
-#_(send-data {:type "get" :data "wordcloud"})
-#_(draw-word-cloud)
-#_(create-nav)
