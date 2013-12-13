@@ -6,7 +6,6 @@
 (def special-characters [";" "," "\\." "!" "\\?" ":" "\\*" "\""  "'" "_" "-" "\\)" "\\(" "\r" "\\]" "\\["])
 (def stopwords (into #{} (split (slurp "data/english_stopwords.txt") #",")))
 
-
 (defn- remove-special-chars [word special-chars-list]
   (if-not (seq special-chars-list)
     (lower-case word)
@@ -25,14 +24,13 @@
 
 (defn get-adjacency-list [path]
   "Parse adjacency list and convert to readable form"
-  (let [raw-data (split (slurp path) #"\n")
-        edges (map #(split % #" ") raw-data)
-        keyword-sequence (range 1 (inc (count raw-data)))]
-    (->> (into {} (map vector keyword-sequence edges))
+  (let [raw-data (split (slurp path) #"\n")]
+    (->> (map #(split % #" ") raw-data)
+         (map vector (map str (range 1 (inc (count raw-data)))))
+         (into {})
          (map (fn [x] (map #(into #{} [(key x) %]) (val x))))
-         flatten
-         (apply vector))))
+         flatten)))
 
 
 ;; live coding vars
-#_(get-adjacency-list "data/graph.adjl")
+#_ (get-adjacency-list "data/graph.adjl")
