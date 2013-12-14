@@ -26,11 +26,11 @@
   "Parse adjacency list and convert to readable form"
   (let [raw-data (split (slurp path) #"\n")]
     (->> (map #(split % #" ") raw-data)
-         (map vector (map str (range 1 (inc (count raw-data)))))
+         (map vector (map str (range (count raw-data))))
          (into {})
          (map (fn [x] (map #(into #{} [(key x) %]) (val x))))
-         flatten)))
+         flatten
+         (into #{}))))
 
 
 ;; live coding vars
-#_ (get-adjacency-list "data/graph.adjl")
