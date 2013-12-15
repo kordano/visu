@@ -22,26 +22,29 @@
   (atom
    {:width 1100
     :height 700
-    :data nil}))
+    :data nil
+    :drawing true}))
 
 (defn log [s]
   (.log js/console (str s)))
 
+(set! clojure.core/*print-fn* (fn [& s] (.log js/console (apply str s))))
 
 ;; --- WEBSOCKET CONNECTION ---
 
-(defn send-data [data]
+(defn send! [data]
   (.send @websocket* (str data)))
 
 
-(defn- receive-data [raw-message]
+(defn- take-all! [raw-message]
   (let [message (read-string raw-message)
         data (message :data)]
     (do
       (log (str "data received: " data))
       (swap! sketch-state assoc :data data))))
 
-(defn establish-websocket []
+
+(defn client-connect! []
   (log "establishing websocket ...")
   (reset! websocket* (js/WebSocket. "ws://localhost:9090"))
   (doall
@@ -53,7 +56,7 @@
          ["onerror" (fn [e] (log (str "ERROR:" e)))]
          ["onmessage" (fn [m]
                         (let [data (.-data m)]
-                          (receive-data data)))]]))
+                          (take-all! data)))]]))
   (set! (.-onclick (sel1 :#disconnect-button)) (fn [] (.close @websocket*) (reset! websocket* nil)))
   (log "websocket loaded."))
 
@@ -85,10 +88,20 @@
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
     (do
       (.beginPath ctx)
-      (.arc ctx x y r start-angle end-angle)
+      (set! (.-fillStyle ctx) color)
       (set! (.-strokeStyle ctx) color)
-      (.stroke ctx))))
+      (.arc ctx x y r start-angle end-angle)
+      (.stroke ctx)
+      (.fill ctx))))
 
+
+(defn draw-line [x1 y1 x2 y2 color]
+  (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
+    (.beginPath ctx)
+    (set! (.-strokeStyle ctx) color)
+    (.moveTo ctx x1 y1)
+    (.lineTo ctx x2 y2)
+    (.stroke ctx)))
 
 (defn draw-text [x y text size alignment color]
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
@@ -105,6 +118,7 @@
         width (@sketch-state :width)]
     (do
       (log "clearing canvas ...")
+      (swap! sketch-state assoc :drawing false)
       (set! (.-fillStyle ctx) "#202035")
       (.fillRect ctx 0 0 width height))))
 
@@ -173,9 +187,7 @@
       (.fillText ctx (key word) x-start y-start)
       (if-not (seq words-list)
         (log "done")
-        (go
-          (<! (timeout 150))
-          (draw-word (first words-list) (+ x-start (.-width (.measureText ctx (key word)))) y-start (rest words-list)))))))
+        (draw-word (first words-list) (+ x-start (.-width (.measureText ctx (key word)))) y-start (rest words-list))))))
 
 
 (defn draw-word-cloud []
@@ -195,53 +207,90 @@
 (defn draw-spiral [theta r]
   (let [x (+ (/ (@sketch-state :width) 2) (* r (Math/cos theta)))
         y (+ (/ (@sketch-state :height) 2)(* r (Math/sin theta)))]
-    (do
-      (draw-arc x y 2 0 (* 2 Math/PI) (rgb-to-string (generate-random-color [255 255 255])))
-      (if (>= theta (* 128 Math/PI))
-        (log "done")
-        (go
-          (<! (timeout 30))
-          (draw-spiral (+ theta (* 3 (/ Math/PI 200))) (+ r 0.1)))))))
+    (if (@sketch-state :drawing)
+      (do
+        (draw-arc x y 2 0 (* 2 Math/PI) (rgb-to-string (generate-random-color [255 255 255])))
+        (if (>= theta (* 64 Math/PI))
+          (log "done")
+          (go
+            (<! (timeout 30))
+            (draw-spiral (+ theta (* 3 (/ Math/PI 200))) (+ r 0.1)))))
+      (println "Drawing interrupted ..."))))
 
-#_(draw-spiral 0 0)
+
+(defn add-vectors [[x1 y1] [x2 y2]]
+  [(+ x1 x2) (+ y1 y2)])
+
+(defn delta-vectors [[x1 y1] [x2 y2]]
+  [(- x1 x2) (- y1 y2)])
+
+(defn vector-length [[x y]]
+  (Math/sqrt (+ (* x x) (* y y))))
+
+(defn scalar-mult-vector [k [x y]]
+  [(* k x) (* k y)])
+
+(defn prepare-graph-data [data]
+  (let [edges (@sketch-state :data)
+        vertices (->> @sketch-state
+               :data
+               (map #(into [] %))
+               flatten
+               (into #{})
+               (map #(vector % {:position [(+ (/ (@sketch-state :width) 2) (* (rand 550) (Math/cos (rand (* 64 Math/PI)))))
+                                           (+ (/ (@sketch-state :height) 2) (* (rand 350) (Math/sin (rand (* 64 Math/PI)))))]
+                                :displacement [0 0]}))
+               (into {}))]
+    (swap! sketch-state assoc :data {:edges edges :vertices vertices :constants {:k (* 0.25 (Math/sqrt (/ (* (@sketch-state :width) (@sketch-state :height)) (count vertices))))}})))
+
 
 (defn draw-force-based-graph []
   (let [data (-> @sketch-state :data)
         sketch-height (@sketch-state :height)
         sketch-width (@sketch-state :width)
-        ctx (.getContext (sel1 :#the-canvas) "2d")]
+        ctx (.getContext (sel1 :#the-canvas) "2d")
+        vertices ()]
     (clear-canvas)
     (doall
-     (map #(draw-arc (-> % val :x) (-> % val :y) 3  0 (* 2 Math/PI) "#ffffff") vertices))))
+     (map #(draw-arc (-> % val :x) (-> % val :y) 3  0 (* 2 Math/PI) "#ffffff") data))))
 
+(-> @sketch-state :data)
 
-#_(draw-force-based-graph)
 ;; --- HTML STUFF ---
 
 (defn enable-buttons []
   (do
-    (set! (.-onclick (sel1 :#connect-button)) (fn [] (establish-websocket)))
+    (set! (.-onclick (sel1 :#connect-button)) (fn [] (client-connect!)))
     (set!
      (.-onclick (sel1 :#cancer-bar-graph-button))
      (fn [] (go
-             (send-data {:type "get" :data "cancer"})
+             (send! {:type "get" :data "cancer"})
              (<! (timeout 500))
              (draw-cancer-graph)
              (dom/set-text! (sel1 :#header-title) "Cancer Graph"))))
     (set!
      (.-onclick (sel1 :#word-cloud-button))
      (fn [] (go
-             (send-data {:type "get" :data "wordcloud"})
+             (send! {:type "get" :data "wordcloud"})
              (<! (timeout 500))
              (draw-word-cloud)
              (dom/set-text! (sel1 :#header-title) "Wordcloud"))))
     (set!
-     (.-onclick (sel1 :#force-based-graph-button))
+     (.-onclick (sel1 :#spiral-button))
      (fn [] (go
-             (send-data {:type "get" :data "graph"})
-             (<! (timeout 500))
+             (clear-canvas)
+             (swap! sketch-state assoc :drawing true)
              (draw-spiral 0 0)
              (dom/set-text! (sel1 :#header-title) "Spiral"))))
+    (set!
+     (.-onclick (sel1 :#force-based-graph-button))
+     (fn [] (go
+             (send! {:type "get" :data "graph"})
+             (<! (timeout 500))
+             (clear-canvas)
+             (swap! sketch-state assoc :drawing true)
+             (prepare-graph-data (@sketch-state :data))
+             (dom/set-text! (sel1 :#header-title) "Force based graph"))))
     (set!
      (.-onclick (sel1 :#clear-canvas-button))
      (fn [] (clear-canvas)))))
@@ -263,6 +312,7 @@
          [:li [:a#cancer-bar-graph-button  "Cancer bar graph"]]
          [:li [:a#word-cloud-button "Word Cloud"]]
          [:li [:a#force-based-graph-button "Force-based graph"]]
+         [:li [:a#spiral-button "Spiral"]]
          [:li [:a#clear-canvas-button "Clear"]]]]
        [:li.cat3 [:a#header-title "Title"]]]])))
 
@@ -274,7 +324,53 @@
       (create-nav)
       (dom/append! body [:div#canvas-div [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
       (enable-buttons)
-      (establish-websocket))))
+      (client-connect!))))
 
 
 (set! (.-onload js/window) init)
+
+
+;; live-coding stuff
+
+#_(client-connect!)
+#_(@sketch-state :drawing)
+#_(send! {:type "get" :data "graph"})
+
+#_(clear-canvas)
+
+
+#_(let [vertices (-> @sketch-state :data :vertices)
+      edges (-> @sketch-state :data :edges)]
+  (go
+    (doall
+     (map #(draw-arc (-> % val :position first) (-> % val :position second) 3 0 (* 2 Math/PI) "#ff2222") vertices))
+    (doall
+     (map #(draw-line (-> % first vertices :position first) (-> % first vertices :position second) (-> % second vertices :position first) (-> % second vertices :position second) "#aaaaaa") edges))))
+
+
+#_(defn calculate-displacements []
+     (let [vertices (-> @sketch-state :data :vertices)
+           edges (-> @sketch-state :data :edges)
+           k (-> @sketch-state :data :constants :k)]
+       (do
+         (map
+          (fn [x]
+            (swap! sketch-state assoc-in [:data :vertices x :displacement]
+                   (reduce add-vectors
+                           (map
+                            #(scalar-mult-vector
+                              (/ (* k k)
+                                 (* (vector-length (delta-vectors ((vertices x) :position) ((vertices %) :position)))
+                                    (vector-length (delta-vectors ((vertices x) :position) ((vertices %) :position)))))
+                              (delta-vectors ((vertices x) :position) ((vertices %) :position)))
+                            (remove #(= % x) (keys vertices))))))
+          (keys vertices)))))
+
+#_(calculate-displacements)
+
+#_(let [vertices (-> @sketch-state :data :vertices)
+           edges (-> @sketch-state :data :edges)
+      k (-> @sketch-state :data :constants :k)]
+  (map #(swap! sketch-state assoc-in [:data (vertices %) :position] (add-vectors ((vertices %) :position) ((vertices %) :displacement))) (keys vertices)))
+
+#_(vector-length (((-> @sketch-state :data :vertices) "11") :position))
