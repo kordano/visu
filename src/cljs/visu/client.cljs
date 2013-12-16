@@ -13,7 +13,7 @@
 ;; fire up repl
 #_(do
     (def repl-env (reset! cemerick.austin.repls/browser-repl-env
-                          (cemerick.austin/repl-env)))
+                         (cemerick.austin/repl-env)))
     (cemerick.austin.repls/cljs-repl repl-env))
 
 (def websocket* (atom nil))
@@ -88,11 +88,10 @@
   (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
     (do
       (.beginPath ctx)
-      (set! (.-fillStyle ctx) color)
       (set! (.-strokeStyle ctx) color)
       (.arc ctx x y r start-angle end-angle)
       (.stroke ctx)
-      (.fill ctx))))
+      )))
 
 
 (defn draw-line [x1 y1 x2 y2 color]
@@ -209,12 +208,12 @@
         y (+ (/ (@sketch-state :height) 2)(* r (Math/sin theta)))]
     (if (@sketch-state :drawing)
       (do
-        (draw-arc x y 2 0 (* 2 Math/PI) (rgb-to-string (generate-random-color [255 255 255])))
-        (if (>= theta (* 64 Math/PI))
+        (draw-arc x y 1 0 (* 2 Math/PI) (rgb-to-string (generate-random-color [255 255 255])))
+        (if (>= theta (* 256 Math/PI))
           (log "done")
           (go
-            (<! (timeout 30))
-            (draw-spiral (+ theta (* 3 (/ Math/PI 200))) (+ r 0.1)))))
+            (<! (timeout 1))
+            (draw-spiral (+ theta (* 3 (/ Math/PI 200))) (+ r 0.05)))))
       (println "Drawing interrupted ..."))))
 
 
@@ -254,7 +253,6 @@
     (doall
      (map #(draw-arc (-> % val :x) (-> % val :y) 3  0 (* 2 Math/PI) "#ffffff") data))))
 
-(-> @sketch-state :data)
 
 ;; --- HTML STUFF ---
 
@@ -372,5 +370,3 @@
            edges (-> @sketch-state :data :edges)
       k (-> @sketch-state :data :constants :k)]
   (map #(swap! sketch-state assoc-in [:data (vertices %) :position] (add-vectors ((vertices %) :position) ((vertices %) :displacement))) (keys vertices)))
-
-#_(vector-length (((-> @sketch-state :data :vertices) "11") :position))
