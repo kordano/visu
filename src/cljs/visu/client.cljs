@@ -5,7 +5,8 @@
             [hiccups.runtime :as hiccupsrt]
             [cljs.reader :refer [read-string]]
             [clojure.browser.repl]
-            [cljs.core.async :as async :refer [>! <! chan put! take! timeout close! map< map> filter< filter>]])
+            [cljs.core.async :as async :refer [>! <! chan put! take! timeout close! map< map> filter< filter>]]
+            [visu.artist :refer [clear-canvas draw-text draw-arc draw-line draw-rect generate-random-color rgb-to-string]])
   (:require-macros [hiccups.core :as hiccups]
                    [cljs.core.async.macros :refer [go alt!]]
                    [dommy.macros :refer [sel sel1 node deftemplate]]))
@@ -60,70 +61,16 @@
   (set! (.-onclick (sel1 :#disconnect-button)) (fn [] (.close @websocket*) (reset! websocket* nil)))
   (log "websocket loaded."))
 
+;; --- DRAWING STUFF ---
 
-
-;; --- CANVAS STUFF ---
-
-(defn generate-random-color [[r g b]]
-  (let [r-new (rand-int 255)
-        g-new (rand-int 255)
-        b-new (rand-int 255)]
-    [(/ (+ r r-new) 2)
-     (/ (+ g g-new) 2)
-     (/ (+ b b-new) 2)]))
-
-
-(defn rgb-to-string [[r g b]]
-  (gcolor/rgbToHex r g b))
-
-
-(defn draw-rect [x y w h c]
-  (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
-    (do
-      (set! (.-fillStyle ctx) c)
-      (.fillRect ctx x y w h))))
-
-
-(defn draw-arc [x y r start-angle end-angle color]
-  (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
-    (do
-      (.beginPath ctx)
-      (set! (.-strokeStyle ctx) color)
-      (.arc ctx x y r start-angle end-angle)
-      (.stroke ctx)
-      )))
-
-
-(defn draw-line [x1 y1 x2 y2 color]
-  (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
-    (.beginPath ctx)
-    (set! (.-strokeStyle ctx) color)
-    (.moveTo ctx x1 y1)
-    (.lineTo ctx x2 y2)
-    (.stroke ctx)))
-
-(defn draw-text [x y text size alignment color]
-  (let [ctx (.getContext (sel1 :#the-canvas) "2d")]
-    (do
-      (set! (.-fillStyle ctx) color)
-      (set! (.-font ctx) (str size "px Open Sans"))
-      (set! (.-textAlign ctx) alignment)
-      (.fillText ctx text x y))))
-
-
-(defn clear-canvas []
-  (let [ctx (.getContext (sel1 :#the-canvas) "2d")
-        height (@sketch-state :height)
-        width (@sketch-state :width)]
-    (do
-      (log "clearing canvas ...")
-      (swap! sketch-state assoc :drawing false)
-      (set! (.-fillStyle ctx) "#202035")
-      (.fillRect ctx 0 0 width height))))
+(defn cleanup []
+  (clear-canvas (deref sketch-state) (sel1 :#the-canvas))
+  (swap! sketch-state assoc :drawing false))
 
 
 (defn draw-cancer-graph []
   (let [raw-data (@sketch-state :data)
+        canvas (sel1 :#the-canvas)
         data (vals raw-data)
         cancer-type (apply vector (keys raw-data))
         scale (/ 400.0 35000)
@@ -141,8 +88,8 @@
                               reverse)
         sorted-hashmap (into {} (map vector (range (count data)) sorted-summarized))]
     (do
-      (clear-canvas)
-      (draw-text (/ bar-width 2) 20 "Female Cancer Distribution" 16 "center" "#50afde")
+      (cleanup)
+      (draw-text canvas (/ bar-width 2) 20 "Female Cancer Distribution" 16 "center" "#50afde")
       (doall
        (map
         #(let [child-size (- (* scale (the-children (val %))))
@@ -151,23 +98,27 @@
                x (+ 5 (* (key %) step))]
            (do
              (draw-rect
+              canvas
               x y-start
               (- step 5) child-size
               "#BB66AA")
              (draw-rect
+              canvas
               x (+ y-start child-size)
               (- step 5) mid-size
               "#AABB66")
              (draw-rect
+              canvas
               x (+ y-start child-size mid-size)
               (- step 5) older-size
               "#66AABB")
-             (draw-text (+ x (/ step 2)) (+ y-start 20) (cancer-type (val %)) 14 "center" "#7070aa")))
+             (draw-text canvas (+ x (/ step 2)) (+ y-start 20) (cancer-type (val %)) 14 "center" "#7070aa")))
         sorted-hashmap)))))
 
 
 (defn draw-word [word x-position y-position words-list]
-  (let [ctx (.getContext (sel1 :#the-canvas) "2d")
+  (let [canvas (sel1 :#the-canvas)
+        ctx (.getContext canvas "2d")
         meta-data (@sketch-state :meta-data)
         a (Math/sqrt (/ (- (val word) (meta-data :n-min))
                         (- (meta-data :n-max) (meta-data :n-min))))
@@ -191,24 +142,26 @@
 
 (defn draw-word-cloud []
   (let [data (remove #(< (val %) 5) (@sketch-state :data))
-        ctx (.getContext (sel1 :#the-canvas) "2d")]
+        canvas (sel1 :#the-canvas)
+        ctx (.getContext canvas "2d")]
     (swap! sketch-state assoc :meta-data
            {:n-max (apply max (vals data))
             :n-min 5
             :text-min 2
             :text-max 50})
-    (clear-canvas)
+    (cleanup)
     (set! (.-fillStyle ctx) "#202035")
     (.fillRect ctx 0 0 (@sketch-state :width) (@sketch-state :height))
     (draw-word (first data) 0 50 (rest data))))
 
 
 (defn draw-spiral [theta r]
-  (let [x (+ (/ (@sketch-state :width) 2) (* r (Math/cos theta)))
+  (let [canvas (sel1 :#the-canvas)
+        x (+ (/ (@sketch-state :width) 2) (* r (Math/cos theta)))
         y (+ (/ (@sketch-state :height) 2)(* r (Math/sin theta)))]
     (if (@sketch-state :drawing)
       (do
-        (draw-arc x y 1 0 (* 2 Math/PI) (rgb-to-string (generate-random-color [255 255 255])))
+        (draw-arc canvas x y 1 0 (* 2 Math/PI) (rgb-to-string (generate-random-color [255 255 255])))
         (if (>= theta (* 256 Math/PI))
           (log "done")
           (go
@@ -247,11 +200,12 @@
   (let [data (-> @sketch-state :data)
         sketch-height (@sketch-state :height)
         sketch-width (@sketch-state :width)
-        ctx (.getContext (sel1 :#the-canvas) "2d")
+        canvas (sel1 (@sketch-state :canvas))
+        ctx (.getContext canvas "2d")
         vertices ()]
-    (clear-canvas)
+    (cleanup)
     (doall
-     (map #(draw-arc (-> % val :x) (-> % val :y) 3  0 (* 2 Math/PI) "#ffffff") data))))
+     (map #(draw-arc canvas (-> % val :x) (-> % val :y) 3  0 (* 2 Math/PI) "#ffffff") data))))
 
 
 ;; --- HTML STUFF ---
@@ -276,7 +230,7 @@
     (set!
      (.-onclick (sel1 :#spiral-button))
      (fn [] (go
-             (clear-canvas)
+             (cleanup)
              (swap! sketch-state assoc :drawing true)
              (draw-spiral 0 0)
              (dom/set-text! (sel1 :#header-title) "Spiral"))))
@@ -285,13 +239,13 @@
      (fn [] (go
              (send! {:type "get" :data "graph"})
              (<! (timeout 500))
-             (clear-canvas)
+             (cleanup)
              (swap! sketch-state assoc :drawing true)
              (prepare-graph-data (@sketch-state :data))
              (dom/set-text! (sel1 :#header-title) "Force based graph"))))
     (set!
      (.-onclick (sel1 :#clear-canvas-button))
-     (fn [] (clear-canvas)))))
+     (fn [] (cleanup)))))
 
 
 (defn create-nav []
@@ -334,16 +288,19 @@
 #_(@sketch-state :drawing)
 #_(send! {:type "get" :data "graph"})
 
-#_(clear-canvas)
+#_(cleanup)
 
 
+
+;; fruchterman-reingold stuff
 #_(let [vertices (-> @sketch-state :data :vertices)
-      edges (-> @sketch-state :data :edges)]
+        edges (-> @sketch-state :data :edges)
+        canvas (sel1 :#the-canvas)]
   (go
     (doall
-     (map #(draw-arc (-> % val :position first) (-> % val :position second) 3 0 (* 2 Math/PI) "#ff2222") vertices))
+     (map #(draw-arc canvas (-> % val :position first) (-> % val :position second) 3 0 (* 2 Math/PI) "#ff2222") vertices))
     (doall
-     (map #(draw-line (-> % first vertices :position first) (-> % first vertices :position second) (-> % second vertices :position first) (-> % second vertices :position second) "#aaaaaa") edges))))
+     (map #(draw-line canvas (-> % first vertices :position first) (-> % first vertices :position second) (-> % second vertices :position first) (-> % second vertices :position second) "#aaaaaa") edges))))
 
 
 #_(defn calculate-displacements []
