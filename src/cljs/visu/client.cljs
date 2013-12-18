@@ -5,8 +5,14 @@
             [hiccups.runtime :as hiccupsrt]
             [cljs.reader :refer [read-string]]
             [clojure.browser.repl]
+            [cljs-webgl.context :as context]
+            [cljs-webgl.shaders :as shaders]
+            [cljs-webgl.constants :as constants]
+            [cljs-webgl.buffers :as buffers]
+            [cljs-webgl.typed-arrays :as ta]
             [cljs.core.async :as async :refer [>! <! chan put! take! timeout close! map< map> filter< filter>]]
-            [visu.artist :refer [clear-canvas draw-text draw-arc draw-line draw-rect generate-random-color rgb-to-string]])
+            [visu.artist :refer [clear-canvas draw-text draw-arc draw-line draw-rect generate-random-color rgb-to-string]]
+            )
   (:require-macros [hiccups.core :as hiccups]
                    [cljs.core.async.macros :refer [go alt!]]
                    [dommy.macros :refer [sel sel1 node deftemplate]]))
@@ -244,6 +250,11 @@
              (prepare-graph-data (@sketch-state :data))
              (dom/set-text! (sel1 :#header-title) "Force based graph"))))
     (set!
+     (.-onclick (sel1 :#real-3d-button))
+     (fn [] (go
+             (cleanup)
+             (dom/set-text! (sel1 :#header-title) "3D on 2D, hot!"))))
+    (set!
      (.-onclick (sel1 :#clear-canvas-button))
      (fn [] (cleanup)))))
 
@@ -265,6 +276,7 @@
          [:li [:a#word-cloud-button "Word Cloud"]]
          [:li [:a#force-based-graph-button "Force-based graph"]]
          [:li [:a#spiral-button "Spiral"]]
+         [:li [:a#real-3d-button "No way, its 3D!!1"]]
          [:li [:a#clear-canvas-button "Clear"]]]]
        [:li.cat3 [:a#header-title "Title"]]]])))
 
@@ -275,6 +287,17 @@
     (do
       (create-nav)
       (dom/append! body [:div#canvas-div [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
+      (dom/append! body [:script#fragment-shader {:type "x-shader/x-fragment"} "void main(void) {
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  }" ])
+      (dom/append! body [:script#vertex-shader {:type "x-shader/x-vertex"} "attribute vec3 aVertexPosition;
+
+  uniform mat4 uMVMatrix;
+  uniform mat4 uPMatrix;
+
+  void main(void) {
+    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+  }"])
       (enable-buttons)
       (client-connect!))))
 
@@ -296,12 +319,13 @@
 #_(let [vertices (-> @sketch-state :data :vertices)
         edges (-> @sketch-state :data :edges)
         canvas (sel1 :#the-canvas)]
-  (go
-    (doall
-     (map #(draw-arc canvas (-> % val :position first) (-> % val :position second) 3 0 (* 2 Math/PI) "#ff2222") vertices))
-    (doall
-     (map #(draw-line canvas (-> % first vertices :position first) (-> % first vertices :position second) (-> % second vertices :position first) (-> % second vertices :position second) "#aaaaaa") edges))))
-
+    (go
+      (while true
+        (<! (timeout 1))
+        (doall
+         (map #(draw-arc canvas (-> % val :position first) (-> % val :position second) 3 0 (* 2 Math/PI) "#ff2222") vertices))
+        (doall
+         (map #(draw-line canvas (-> % first vertices :position first) (-> % first vertices :position second) (-> % second vertices :position first) (-> % second vertices :position second) "#aaaaaa") edges)))))
 
 #_(defn calculate-displacements []
      (let [vertices (-> @sketch-state :data :vertices)
@@ -326,4 +350,31 @@
 #_(let [vertices (-> @sketch-state :data :vertices)
            edges (-> @sketch-state :data :edges)
       k (-> @sketch-state :data :constants :k)]
-  (map #(swap! sketch-state assoc-in [:data (vertices %) :position] (add-vectors ((vertices %) :position) ((vertices %) :displacement))) (keys vertices)))
+    (map #(swap! sketch-state assoc-in [:data (vertices %) :position] (add-vectors ((vertices %) :position) ((vertices %) :displacement))) (keys vertices)))
+
+
+;; Here comes the webgl or not
+
+#_(def gl (context/get-context (sel1 :#the-canvas)))
+#_(def fragment-shader (shaders/create-shader gl constants/fragment-shader (.-innerHTML (sel1 :#fragment-shader))))
+#_(def vertex-shader (shaders/create-shader gl constants/vertex-shader (.-innerHTML (sel1 :#vertex-shader))))
+#_(def shader-program (shaders/create-program gl [vertex-shader fragment-shader]))
+#_(def triangle-buffer (buffers/create-buffer gl (ta/float32 [0.0 1.0 -1.0 -1.0 1.0 -1.0]) constants/array-buffer constants/static-draw))
+
+#_(buffers/draw-arrays gl shader-program triangle-buffer constants/array-buffer
+                         (shaders/get-attrib-location gl
+                                                      shader-program
+                                                      "vertex_position")
+                       constants/triangles
+                       constants/float
+                       0
+                       2
+                       false
+                       0
+                       0
+                       3
+                       [{:name "color" :type :vec4 :values [1.0 0.0 0.0 1.0]}])
+
+#_(shaders/get-attrib-location gl shader-program "vertex_position")
+
+#_(println  (.getShaderInfoLog gl vertex-shader))

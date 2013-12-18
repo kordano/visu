@@ -16,6 +16,7 @@
                  [compojure "1.1.5"]
                  [quil "1.6.0"]
                  [prismatic/dommy "0.1.1"]
+                 [cljs-webgl "0.1.3-SNAPSHOT"]
                  [hiccups "0.2.0"]]
 
   :plugins [[lein-cljsbuild "0.3.2"]
