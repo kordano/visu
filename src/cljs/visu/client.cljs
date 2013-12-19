@@ -12,7 +12,7 @@
             [cljs-webgl.typed-arrays :as ta]
             [cljs.core.async :as async :refer [>! <! chan put! take! timeout close! map< map> filter< filter>]]
             [visu.artist :refer [clear-canvas draw-text draw-arc draw-line draw-rect generate-random-color rgb-to-string]]
-            )
+            [visu.sculptor :as sculptor])
   (:require-macros [hiccups.core :as hiccups]
                    [cljs.core.async.macros :refer [go alt!]]
                    [dommy.macros :refer [sel sel1 node deftemplate]]))
@@ -253,6 +253,7 @@
      (.-onclick (sel1 :#real-3d-button))
      (fn [] (go
              (cleanup)
+             (work-you-sucker! "the-canvas")
              (dom/set-text! (sel1 :#header-title) "3D on 2D, hot!"))))
     (set!
      (.-onclick (sel1 :#clear-canvas-button))
@@ -287,17 +288,8 @@
     (do
       (create-nav)
       (dom/append! body [:div#canvas-div [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
-      (dom/append! body [:script#fragment-shader {:type "x-shader/x-fragment"} "void main(void) {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-  }" ])
-      (dom/append! body [:script#vertex-shader {:type "x-shader/x-vertex"} "attribute vec3 aVertexPosition;
-
-  uniform mat4 uMVMatrix;
-  uniform mat4 uPMatrix;
-
-  void main(void) {
-    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-  }"])
+      (dom/append! body [:script#fragment-shader {:type "x-shader/x-fragment"} "void main(void) {gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);}" ])
+      (dom/append! body [:script#vertex-shader {:type "x-shader/x-vertex"} "attribute vec3 aVertexPosition; uniform mat4 uMVMatrix; uniform mat4 uPMatrix; void main(void) {gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);}"])
       (enable-buttons)
       (client-connect!))))
 
@@ -354,27 +346,4 @@
 
 
 ;; Here comes the webgl or not
-
-#_(def gl (context/get-context (sel1 :#the-canvas)))
-#_(def fragment-shader (shaders/create-shader gl constants/fragment-shader (.-innerHTML (sel1 :#fragment-shader))))
-#_(def vertex-shader (shaders/create-shader gl constants/vertex-shader (.-innerHTML (sel1 :#vertex-shader))))
-#_(def shader-program (shaders/create-program gl [vertex-shader fragment-shader]))
-#_(def triangle-buffer (buffers/create-buffer gl (ta/float32 [0.0 1.0 -1.0 -1.0 1.0 -1.0]) constants/array-buffer constants/static-draw))
-
-#_(buffers/draw-arrays gl shader-program triangle-buffer constants/array-buffer
-                         (shaders/get-attrib-location gl
-                                                      shader-program
-                                                      "vertex_position")
-                       constants/triangles
-                       constants/float
-                       0
-                       2
-                       false
-                       0
-                       0
-                       3
-                       [{:name "color" :type :vec4 :values [1.0 0.0 0.0 1.0]}])
-
-#_(shaders/get-attrib-location gl shader-program "vertex_position")
-
-#_(println  (.getShaderInfoLog gl vertex-shader))
+#_(sculptor/work-you-sucker! "the-canvas")
