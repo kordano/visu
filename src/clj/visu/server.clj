@@ -14,6 +14,8 @@
   (case type
     "get" {:type "get" :data (get-data data)}
     "greeting" {:type "greeting" :data "Hail to the LAMBDA!"}))
+
+
                                         ; websocket server
 (defn handler [request]
   (with-channel request channel
@@ -24,7 +26,8 @@
                             (send! channel (str (destructure-request (read-string data)))))))))
 
 
-(def stop-server (run-server handler {:port 9090}))
+(defn start-ws-server [port]
+  (run-server handler {:port port}))
 #_(stop-server)
 
 
@@ -41,8 +44,10 @@
   (GET "/*" req (page)))
 
 
-(def hmtl-server (run-jetty #'site {:port 8080 :join? false}))
+(defn start-html-server [port]
+  (run-jetty #'site {:port port :join? false}))
 
 (defn -main
   [& args]
-  (println "Servers up and running ..."))
+  (start-html-server 8080)
+  (start-ws-server 9090))
