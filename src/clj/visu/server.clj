@@ -32,22 +32,29 @@
 
 
                                         ; ring server
+
+
+
 (enlive/deftemplate page
   (io/resource "public/index.html")
   []
   [:body] (enlive/append
-           (enlive/html [:script (browser-connected-repl-js)])))
-
+            (enlive/html [:script (browser-connected-repl-js)])))
 
 (defroutes site
   (resources "/")
   (GET "/*" req (page)))
 
-
-(defn start-html-server [port]
-  (run-jetty #'site {:port port :join? false}))
+(defn run
+  []
+  (defonce ^:private server
+    (ring.adapter.jetty/run-jetty #'site {:port 8080 :join? false}))
+  server)
 
 (defn -main
   [& args]
-  (start-html-server 8080)
+  (run)
   (start-ws-server 9090))
+
+#_(run)
+#_(start-ws-server 9090)
