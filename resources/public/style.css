@@ -7,11 +7,21 @@ body {
     font-size: 14px;
     color: #7070AA;
     width: 100%;
+    height: 100%;
+}
+
+svg {
+    width: 100%;
+    height: 100%;
+    display: inline;
 }
 
 #the-canvas {
     margin: 5px 15px;
 }
+
+
+
 
 /* Navigation bar */
 nav {
@@ -79,4 +89,8 @@ nav ul li ul li a:active{
     cursor: pointer;
     color: #303050;
     background: #7070aa;
+}
+
+#header-title {
+    color: #50afde;
 }
