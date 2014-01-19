@@ -5,11 +5,6 @@
             [hiccups.runtime :as hiccupsrt]
             [cljs.reader :refer [read-string]]
             [clojure.browser.repl]
-            [cljs-webgl.context :as context]
-            [cljs-webgl.shaders :as shaders]
-            [cljs-webgl.constants :as constants]
-            [cljs-webgl.buffers :as buffers]
-            [cljs-webgl.typed-arrays :as ta]
             [cljs.core.async :as async :refer [>! <! chan put! take! timeout close! map< map> filter< filter>]]
             [visu.artist :refer [clear-canvas draw-text draw-arc draw-line draw-rect generate-random-color rgb-to-string]]
             [visu.sculptor :as sculptor])
@@ -29,8 +24,9 @@
   (atom
    {:width 1100
     :height 700
-    :data nil
     :drawing true}))
+
+(def sketch-data (atom {:data nil :selected nil}))
 
 (defn log [s]
   (.log js/console (str s)))
@@ -47,8 +43,8 @@
   (let [message (read-string raw-message)
         data (message :data)]
     (do
-      (log (str "data received: " data))
-      (swap! sketch-state assoc :data data))))
+      (log (str "data received!"))
+      (swap! sketch-data assoc :data data))))
 
 
 (defn client-connect! []
@@ -67,7 +63,22 @@
   (set! (.-onclick (sel1 :#disconnect-button)) (fn [] (.close @websocket*) (reset! websocket* nil)))
   (log "websocket loaded."))
 
+
 ;; --- DRAWING STUFF ---
+
+(def color-palette [(rgb-to-string [2 56 88])
+                    (rgb-to-string [4 90 141])
+                    (rgb-to-string [5 112 176])
+                    (rgb-to-string [54 144 192])
+                    (rgb-to-string [116 169 207])
+                    (rgb-to-string [166 189 219])
+                    (rgb-to-string [208 209 230])
+                    (rgb-to-string [236 231 242])
+                    (rgb-to-string [255 247 251])])
+
+(defn math-log [x base]
+  (/ (Math/log x) (Math/log base)))
+
 
 (defn cleanup []
   (clear-canvas (deref sketch-state) (sel1 :#the-canvas))
@@ -75,7 +86,7 @@
 
 
 (defn draw-cancer-graph []
-  (let [raw-data (@sketch-state :data)
+  (let [raw-data (@sketch-data :data)
         canvas (sel1 :#the-canvas)
         data (vals raw-data)
         cancer-type (apply vector (keys raw-data))
@@ -147,7 +158,7 @@
 
 
 (defn draw-word-cloud []
-  (let [data (remove #(< (val %) 5) (@sketch-state :data))
+  (let [data (remove #(< (val %) 5) (@sketch-data :data))
         canvas (sel1 :#the-canvas)
         ctx (.getContext canvas "2d")]
     (swap! sketch-state assoc :meta-data
@@ -189,7 +200,7 @@
   [(* k x) (* k y)])
 
 (defn prepare-graph-data [data]
-  (let [edges (@sketch-state :data)
+  (let [edges (@sketch-data :data)
         vertices (->> @sketch-state
                :data
                (map #(into [] %))
@@ -199,11 +210,11 @@
                                            (+ (/ (@sketch-state :height) 2) (* (rand 350) (Math/sin (rand (* 64 Math/PI)))))]
                                 :displacement [0 0]}))
                (into {}))]
-    (swap! sketch-state assoc :data {:edges edges :vertices vertices :constants {:k (* 0.25 (Math/sqrt (/ (* (@sketch-state :width) (@sketch-state :height)) (count vertices))))}})))
+    (swap! sketch-data assoc :data {:edges edges :vertices vertices :constants {:k (* 0.25 (Math/sqrt (/ (* (@sketch-state :width) (@sketch-state :height)) (count vertices))))}})))
 
 
 (defn draw-force-based-graph []
-  (let [data (-> @sketch-state :data)
+  (let [data (-> @sketch-data :data)
         sketch-height (@sketch-state :height)
         sketch-width (@sketch-state :width)
         canvas (sel1 (@sketch-state :canvas))
@@ -213,6 +224,30 @@
     (doall
      (map #(draw-arc canvas (-> % val :x) (-> % val :y) 3  0 (* 2 Math/PI) "#ffffff") data))))
 
+
+(defn draw-scalar-weather-data []
+  (let [data (@sketch-data :data)
+        cells (apply vector (map #(assoc % :color-index (dec (Math/round (/ (math-log (% :value) 10) -2)))) (data :cells)))
+        x-stepsize (/ (@sketch-state :width) (dec (data :x-dim)))
+        y-stepsize (/ (@sketch-state :height) (dec (data :y-dim)))
+        canvas (sel1 :#the-canvas)]
+    (do
+      (cleanup)
+      (doall
+       (map
+        (fn [x]
+          (do
+            (doall
+             (map
+              #(draw-rect
+                canvas
+                (* x x-stepsize)
+                (* % y-stepsize)
+                x-stepsize
+                y-stepsize
+                (color-palette ((cells (+ x (* % (dec (data :x-dim))))) :color-index)))
+              (range (dec (data :y-dim)))))))
+        (range (dec (data :x-dim))))))))
 
 ;; --- HTML STUFF ---
 
@@ -234,6 +269,13 @@
              (draw-word-cloud)
              (dom/set-text! (sel1 :#header-title) "Wordcloud"))))
     (set!
+     (.-onclick (sel1 :#scalar-weather-data-button))
+     (fn [] (go
+             (send! {:type "get" :data "weatherdata"})
+             (<! (timeout 2000))
+             (draw-scalar-weather-data)
+             (dom/set-text! (sel1 :#header-title) "Prepicipation Worldwide"))))
+    (set!
      (.-onclick (sel1 :#spiral-button))
      (fn [] (go
              (cleanup)
@@ -241,19 +283,10 @@
              (draw-spiral 0 0)
              (dom/set-text! (sel1 :#header-title) "Spiral"))))
     (set!
-     (.-onclick (sel1 :#force-based-graph-button))
-     (fn [] (go
-             (send! {:type "get" :data "graph"})
-             (<! (timeout 500))
-             (cleanup)
-             (swap! sketch-state assoc :drawing true)
-             (prepare-graph-data (@sketch-state :data))
-             (dom/set-text! (sel1 :#header-title) "Force based graph"))))
-    (set!
      (.-onclick (sel1 :#real-3d-button))
      (fn [] (go
              (cleanup)
-             (work-you-sucker! "the-canvas")
+             (sculptor/work-you-sucker! "webgl-canvas")
              (dom/set-text! (sel1 :#header-title) "3D on 2D, hot!"))))
     (set!
      (.-onclick (sel1 :#clear-canvas-button))
@@ -275,7 +308,7 @@
         [:ul
          [:li [:a#cancer-bar-graph-button  "Cancer bar graph"]]
          [:li [:a#word-cloud-button "Word Cloud"]]
-         [:li [:a#force-based-graph-button "Force-based graph"]]
+         [:li [:a#scalar-weather-data-button "Draw Weather Data"]]
          [:li [:a#spiral-button "Spiral"]]
          [:li [:a#real-3d-button "No way, its 3D!!1"]]
          [:li [:a#clear-canvas-button "Clear"]]]]
@@ -287,9 +320,8 @@
         state (deref sketch-state)]
     (do
       (create-nav)
-      (dom/append! body [:div#canvas-div [:canvas#the-canvas {:width (state :width) :height (state :height)}]])
-      (dom/append! body [:script#fragment-shader {:type "x-shader/x-fragment"} "void main(void) {gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);}" ])
-      (dom/append! body [:script#vertex-shader {:type "x-shader/x-vertex"} "attribute vec3 aVertexPosition; uniform mat4 uMVMatrix; uniform mat4 uPMatrix; void main(void) {gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);}"])
+      (dom/append! body [:div#canvas-div [:canvas#the-canvas {:width (state :width) :height (state :height)}]
+                         [:canvas#webgl-canvas {:width (state :width) :height (state :height)}]])
       (enable-buttons)
       (client-connect!))))
 
@@ -304,46 +336,3 @@
 #_(send! {:type "get" :data "graph"})
 
 #_(cleanup)
-
-
-
-;; fruchterman-reingold stuff
-#_(let [vertices (-> @sketch-state :data :vertices)
-        edges (-> @sketch-state :data :edges)
-        canvas (sel1 :#the-canvas)]
-    (go
-      (while true
-        (<! (timeout 1))
-        (doall
-         (map #(draw-arc canvas (-> % val :position first) (-> % val :position second) 3 0 (* 2 Math/PI) "#ff2222") vertices))
-        (doall
-         (map #(draw-line canvas (-> % first vertices :position first) (-> % first vertices :position second) (-> % second vertices :position first) (-> % second vertices :position second) "#aaaaaa") edges)))))
-
-#_(defn calculate-displacements []
-     (let [vertices (-> @sketch-state :data :vertices)
-           edges (-> @sketch-state :data :edges)
-           k (-> @sketch-state :data :constants :k)]
-       (do
-         (map
-          (fn [x]
-            (swap! sketch-state assoc-in [:data :vertices x :displacement]
-                   (reduce add-vectors
-                           (map
-                            #(scalar-mult-vector
-                              (/ (* k k)
-                                 (* (vector-length (delta-vectors ((vertices x) :position) ((vertices %) :position)))
-                                    (vector-length (delta-vectors ((vertices x) :position) ((vertices %) :position)))))
-                              (delta-vectors ((vertices x) :position) ((vertices %) :position)))
-                            (remove #(= % x) (keys vertices))))))
-          (keys vertices)))))
-
-#_(calculate-displacements)
-
-#_(let [vertices (-> @sketch-state :data :vertices)
-           edges (-> @sketch-state :data :edges)
-      k (-> @sketch-state :data :constants :k)]
-    (map #(swap! sketch-state assoc-in [:data (vertices %) :position] (add-vectors ((vertices %) :position) ((vertices %) :displacement))) (keys vertices)))
-
-
-;; Here comes the webgl or not
-#_(sculptor/work-you-sucker! "the-canvas")
