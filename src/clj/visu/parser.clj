@@ -73,19 +73,19 @@
 
 
 (defn create-cell-list [points values x-dim y-dim]
-  (->> (map (fn [x]
+  (->> (map (fn [y]
               (map
-               #(let [index1 (+ x (* % x-dim))
-                      index2 (inc (+ x (* % x-dim)))
-                      index3 (+ x (* % x-dim) x-dim)
-                      index4 (inc (+ x (* % x-dim) x-dim))]
+               #(let [index1 (+ % (* y x-dim))
+                      index2 (inc (+ % (* y x-dim)))
+                      index3 (+ % (* (inc y) x-dim))
+                      index4 (inc (+ % (* (inc y) x-dim)))]
                   (into {} [[:p1 (points index1)]
                             [:p2 (points index2)]
                             [:p3 (points index3)]
                             [:p4 (points index4)]
                             [:value (/ (+ (values index1) (values index2) (values index3) (values index4)) 4)]]))
-               (range (dec y-dim))))
-            (range (dec x-dim)))
+               (range (dec x-dim))))
+            (range (dec y-dim)))
        flatten
        (apply vector)))
 
@@ -101,3 +101,8 @@
      :scalars (:scalars vtk-data)
      :x-dim x-dim
      :y-dim y-dim}))
+
+
+(->> (get-weather-data "data/niederschlag.vtk")
+     :cells
+     (map :value))
