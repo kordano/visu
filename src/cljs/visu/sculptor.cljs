@@ -12,6 +12,7 @@
      gl_Position = vec4(vertex_position, 1);
    }")
 
+
 (def fragment-shader-source
   "uniform int frame;
    void main() {
@@ -20,6 +21,7 @@
      gl_FragColor.b = sin(float(frame) * 0.02) / 2.0 + 0.5;
      gl_FragColor.a = 1.0;
    }")
+
 
 (defn work-you-sucker! [canvas]
   (let [gl (context/get-context (.getElementById js/document canvas))
